@@ -21,10 +21,17 @@ class ImageRequest {
      * @param {Object} event - Lambda request body.
      */
     async setup(event) {
+        const definedSecurityKey = (
+            (process.env.SECURITY_KEY !== "") &&
+            (process.env.SECURITY_KEY !== undefined)
+        );
         try {
+            if (definedSecurityKey) {
+                this.verifySecurityHash(event, process.env.SECURITY_KEY);
+            }
             this.requestType = this.parseRequestType(event);
             this.bucket = this.parseImageBucket(event, this.requestType);
-            this.key = this.parseImageKey(event, this.requestType);
+            this.key = this.parseImageKey(event, this.requestType, definedSecurityKey);
             this.edits = this.parseImageEdits(event, this.requestType);
             this.originalImage = await this.getOriginalImage(this.bucket, this.key)
             return Promise.resolve(this);
@@ -129,16 +136,21 @@ class ImageRequest {
      * original image.
      * @param {String} event - Lambda request body.
      * @param {String} requestType - Type, either "Default", "Thumbor", or "Custom".
+     * @param {boolean} definedSecurityKey - true if security key enabled
      */
-    parseImageKey(event, requestType) {
+    parseImageKey(event, requestType, definedSecurityKey) {
         if (requestType === "Default") {
             // Decode the image request and return the image key
             const decoded = this.decodeRequest(event);
             return decoded.key;
         } else if (requestType === "Thumbor" || requestType === "Custom") {
-            // Parse the key from the end of the path
-            const key = (event["path"]).split("/");
-            return key[key.length - 1];
+            var path = event["path"];
+            if (definedSecurityKey) {
+                const pathParts = path.split('/');
+                var securityHash = pathParts[1];
+                path = path.replace('/' + securityHash, '');
+            }
+            return decodeURIComponent(path.replace(/\d+x\d+\/|filters[:-][^/;]+|\/fit-in\/+|^\/+/g,'').replace(/^\/+/,''));
         } else {
             // Return an error for all other conditions
             throw ({
@@ -160,8 +172,8 @@ class ImageRequest {
         const path = event["path"];
         // ----
         const matchDefault = new RegExp(/^(\/?)([0-9a-zA-Z+\/]{4})*(([0-9a-zA-Z+\/]{2}==)|([0-9a-zA-Z+\/]{3}=))?$/);
-        const matchThumbor = new RegExp(/^(\/?)((fit-in)?|(filters:.+\(.?\))?|(unsafe)?).*(.+jpg|.+png|.+webp|.+tiff|.+jpeg)$/);
-        const matchCustom = new RegExp(/(\/?)(.*)(jpg|png|webp|tiff|jpeg)/);
+        const matchThumbor = new RegExp(/^(\/?)(\S+\/)?((fit-in)?|(filters:.+\(.?\))?|(unsafe)?).*(.+jpg|.+png|.+webp|.+tiff|.+jpeg)$/);
+        const matchCustom = new RegExp(/(\/?)(.*)(jpg|png|webp|tiff|jpeg)/i);
         const definedEnvironmentVariables = (
             (process.env.REWRITE_MATCH_PATTERN !== "") &&
             (process.env.REWRITE_SUBSTITUTION !== "") &&
@@ -232,6 +244,30 @@ class ImageRequest {
             return buckets;
         }
     }
+
+    /**
+    * verifies that the security hash sent in the path is valid
+    * @param {Object} event - The request body.
+    * @param {String} security_key - The security key from environment variable.*
+    */
+   verifySecurityHash(event, security_key) {
+       var crypto = require('crypto');
+
+       var path = event.path;
+       const pathParts = path.split('/');
+       var securityHash = pathParts[1];
+       path = path.replace('/' + securityHash + '/', '');
+       var hash = crypto.createHmac('sha1', security_key).update(path).digest('base64').replace(/\+/g, "-").replace(/\//g, "_");
+
+       if (securityHash !== hash) {
+         throw ({
+             status: 400,
+             code: 'verifySecurityHash::NotAllowed',
+             message: 'Security hash is not valid.'
+         });
+       }
+       return true;
+   }
 }
 
 // Exports
