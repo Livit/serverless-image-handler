@@ -21,10 +21,17 @@ class ImageRequest {
      * @param {Object} event - Lambda request body.
      */
     async setup(event) {
+        const definedSecurityKey = (
+            (process.env.SECURITY_KEY !== "") &&
+            (process.env.SECURITY_KEY !== undefined)
+        );
         try {
+            if (definedSecurityKey) {
+                this.verifySecurityHash(event, process.env.SECURITY_KEY);
+            }
             this.requestType = this.parseRequestType(event);
             this.bucket = this.parseImageBucket(event, this.requestType);
-            this.key = this.parseImageKey(event, this.requestType);
+            this.key = this.parseImageKey(event, this.requestType, definedSecurityKey);
             this.edits = this.parseImageEdits(event, this.requestType);
             this.originalImage = await this.getOriginalImage(this.bucket, this.key);
 
@@ -177,8 +184,9 @@ class ImageRequest {
      * original image.
      * @param {String} event - Lambda request body.
      * @param {String} requestType - Type, either "Default", "Thumbor", or "Custom".
+     * @param {boolean} definedSecurityKey - true if security key enabled
      */
-    parseImageKey(event, requestType) {
+    parseImageKey(event, requestType, definedSecurityKey) {
         if (requestType === "Default") {
             // Decode the image request and return the image key
             const decoded = this.decodeRequest(event);
@@ -208,7 +216,7 @@ class ImageRequest {
         const path = event["path"];
         // ----
         const matchDefault = new RegExp(/^(\/?)([0-9a-zA-Z+\/]{4})*(([0-9a-zA-Z+\/]{2}==)|([0-9a-zA-Z+\/]{3}=))?$/);
-        const matchThumbor = new RegExp(/^(\/?)((fit-in)?|(filters:.+\(.?\))?|(unsafe)?).*(.+jpg|.+png|.+webp|.+tiff|.+jpeg)$/i);
+        const matchThumbor = new RegExp(/^(\/?)(\S+\/)?((fit-in)?|(filters:.+\(.?\))?|(unsafe)?).*(.+jpg|.+png|.+webp|.+tiff|.+jpeg)$/i);
         const matchCustom = new RegExp(/(\/?)(.*)(jpg|png|webp|tiff|jpeg)/i);
         const definedEnvironmentVariables = (
             (process.env.REWRITE_MATCH_PATTERN !== "") &&
