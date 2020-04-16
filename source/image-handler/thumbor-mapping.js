@@ -52,16 +52,11 @@ class ThumborMapping {
         for (let i = 0; i < edits.length; i++) {
             const edit = edits[i];
             if (edit === ('fit-in')) {
-<<<<<<< 19cbc3ce759d7c8d8ddc35081972d7ac1daf0c71
                 if (this.edits.resize === undefined) {
                     this.edits.resize = {};
                 }
 
                 this.edits.resize.fit = 'inside';
-=======
-                this.edits.resize = {};
-                this.edits.resize.fit = "inside"
->>>>>>> OPS-2221 Security key and subfolders support
                 this.sizingMethod = edit;
             } else if (edit.includes('filters:')) {
                 this.mapFilter(edit, filetype);
