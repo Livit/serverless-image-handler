@@ -194,7 +194,13 @@ class ImageRequest {
         }
 
         if (requestType === "Thumbor" || requestType === "Custom") {
-            return decodeURIComponent(event["path"].replace(/\d+x\d+\/|filters[:-][^/;]+|\/fit-in\/+|^\/+/g,'').replace(/^\/+/,''));
+            var path = event["path"];
+            if (definedSecurityKey) {
+                const pathParts = path.split('/');
+                var securityHash = pathParts[1];
+                path = path.replace('/' + securityHash, '');
+            }
+            return decodeURIComponent(path.replace(/\d+x\d+\/|filters[:-][^/;]+|\/fit-in\/+|^\/+/g,'').replace(/^\/+/,''));
         }
 
         // Return an error for all other conditions
@@ -305,7 +311,33 @@ class ImageRequest {
 
         return null;
     }
+
+    /**
+    * verifies that the security hash sent in the path is valid
+    * @param {Object} event - The request body.
+    * @param {String} security_key - The security key from environment variable.*
+    */
+   verifySecurityHash(event, security_key) {
+       var crypto = require('crypto');
+
+       var path = event.path;
+       const pathParts = path.split('/');
+       var securityHash = pathParts[1];
+       path = path.replace('/' + securityHash + '/', '');
+       var hash = crypto.createHmac('sha1', security_key).update(path).digest('base64').replace(/\+/g, "-").replace(/\//g, "_");
+
+       if (securityHash !== hash) {
+         throw ({
+             status: 400,
+             code: 'verifySecurityHash::NotAllowed',
+             message: 'Security hash is not valid.'
+         });
+       }
+       return true;
+   }
 }
+
+
 
 // Exports
 module.exports = ImageRequest;
