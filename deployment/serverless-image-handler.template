@@ -58,6 +58,10 @@
                     "Parameters": [ "CorsEnabled", "CorsOrigin" ]
                 },
                 {
+                    "Label": { "default": "HSTS" },
+                    "Parameters": [ "HSTSEnabled", "HSTSMaxAge" ]
+                },
+                {
                     "Label": { "default": "Image Sources" },
                     "Parameters": [ "SourceBuckets" ]
                 },
