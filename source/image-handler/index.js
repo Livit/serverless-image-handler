@@ -54,6 +54,7 @@ exports.handler = async (event) => {
  */
 const getResponseHeaders = (isErr) => {
     const corsEnabled = (process.env.CORS_ENABLED === "Yes");
+    const hstsEnabled = (process.env.HSTS_ENABLED === "Yes");
     const headers = {
         "Access-Control-Allow-Methods": "GET",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
@@ -61,6 +62,9 @@ const getResponseHeaders = (isErr) => {
     }
     if (corsEnabled) {
         headers["Access-Control-Allow-Origin"] = process.env.CORS_ORIGIN;
+    }
+    if (hstsEnabled) {
+        headers["Strict-Transport-Security"] = `max-age=${process.env.HSTS_MAX_AGE}; includeSubdomains;`;
     }
     if (isErr) {
         headers["Content-Type"] = "application/json"

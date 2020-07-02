@@ -13,6 +13,18 @@
             "Default" : "*",
             "Type" : "String"
         },
+        "HSTSEnabled" : {
+            "Description" : "Would you like to enable HTTP-Strict-Transport-Security? Select 'Yes' if so.",
+            "Default" : "No",
+            "Type" : "String",
+            "AllowedValues" : [ "Yes", "No" ]
+        },
+        "HSTSMaxAge" : {
+            "Description" : "HTTP-Strict-Transport-Security max-age",
+            "Default" : 2592000,
+            "Type" : "Number",
+        },
+
         "SourceBuckets" : {
             "Description" : "(Required) List the buckets (comma-separated) within your account that contain original image files. If you plan to use Thumbor or Custom image requests with this solution, the source bucket for those requests will be the first bucket listed in this field.",
             "Default" : "defaultBucket, bucketNo2, bucketNo3, ...",
@@ -387,6 +399,12 @@
                         },
                         "CORS_ORIGIN" : {
                             "Ref" : "CorsOrigin"
+                        },
+                          "HSTS_ENABLED" : {
+                            "Ref" : "HSTSEnabled"
+                        },
+                        "HSTS_MAX_AGE" : {
+                            "Ref" : "HSTSMaxAge"
                         },
                         "SOURCE_BUCKETS" : {
                             "Ref" : "SourceBuckets"
